@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------------------
+# Integration file for the licensed company "BMW India" (cars).
+# (College demo: the database below is a mock with invented data.)
+#
+# This file is the ONLY company-specific part of ChainTrace. It tells the
+# generic engine how to reach the company's database and how to read it.
+# Adding another company means adding another file like this one.
+#
+# Query contract: each query must return columns with the standard aliases
+# listed below. Any extra column is passed through to the UI as a "detail".
+#   login     -> customer_id, full_name, password_hash      (param :email)
+#   product   -> model, manufacture_date, warranty_expiry,
+#                sold_in, alert                             (param :id)
+#   ownership -> owner_name, purchase_date, channel,
+#                location                                   (param :id)
+# All queries are read-only and use named parameters, never string building.
+# The company's own schema (split names, transfer codes, recall campaigns)
+# is translated into these standard columns by the SQL below.
+# ---------------------------------------------------------------------------
+id: bmw-india
+displayName: BMW India
+productType: CAR
+idLabel: VIN
+idHint: "17-character Vehicle Identification Number. Printed on the windscreen corner and the registration certificate."
+idPattern: "^[A-HJ-NPR-Z0-9]{17}$"
+luhnCheck: false
+apiKey: bmw-demo-key-2b81e4
+
+passwordEncoding: SHA256
+
+datasource:
+  url: "jdbc:h2:mem:bmw_india;DB_CLOSE_DELAY=-1"
+  username: sa
+  password: ""
+
+queries:
+  login: >
+    SELECT acc_no                          AS customer_id,
+           first_name || ' ' || last_name  AS full_name,
+           password_sha256                 AS password_hash
+    FROM account_holders
+    WHERE LOWER(login_email) = LOWER(:email)
+
+  # An open recall campaign is the most important warning, so it wins over an accident flag.
+  product: >
+    SELECT make_model              AS model,
+           manufactured_on         AS manufacture_date,
+           warranty_valid_till     AS warranty_expiry,
+           first_registered_state  AS sold_in,
+           CASE WHEN open_recall IS NOT NULL THEN 'Open recall campaign: ' || open_recall
+                WHEN accident_reported       THEN 'Accident reported'
+                ELSE NULL
+           END                     AS alert,
+           variant,
+           fuel_type
+    FROM vehicles
+    WHERE vin = :id
+
+  ownership: >
+    SELECT a.first_name || ' ' || a.last_name AS owner_name,
+           t.transfer_date                    AS purchase_date,
+           CASE t.transfer_mode
+                WHEN 'DEALER_SALE' THEN 'Dealer sale'
+                WHEN 'RESALE'      THEN 'Resale'
+                ELSE t.transfer_mode
+           END                                AS channel,
+           a.state_code                       AS location,
+           t.odometer_km,
+           t.dealer_name
+    FROM title_transfers t
+    JOIN account_holders a ON a.acc_no = t.to_acc_no
+    WHERE t.vin = :id
+    ORDER BY t.transfer_date

@@ -1,0 +1,14 @@
+target/
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Local-only: demo brand pages, presenter docs and notes (not part of the published code)
+SPEC.md
+README.md
+src/main/resources/static/index.html
+src/main/resources/static/css/
+src/main/resources/static/demo/

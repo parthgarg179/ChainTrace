@@ -1,0 +1,38 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: chaintrace
+
+  # ChainTrace's OWN database. It stores only the audit log, never ownership data.
+  datasource:
+    url: jdbc:h2:mem:chaintrace;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  # Browse the in-memory databases at http://localhost:8080/h2-console
+  #   ChainTrace:    jdbc:h2:mem:chaintrace
+  #   BMW India:     jdbc:h2:mem:bmw_india
+  # (user: sa, password: empty)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+chaintrace:
+  # One YAML file per licensed company. Adding a company = adding a file, not code.
+  companies-location: "classpath:companies/*.yml"
+
+  # How long a customer's login token stays valid.
+  session-ttl-minutes: 30
+
+  demo:
+    # Creates and fills the two mock company databases at startup.
+    # A real deployment sets this to false: the company's database already exists.
+    seed-mock-companies: true

@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Test-only company. It exists so the tests can prove that a login token from
+# one licensed company is rejected on another company's licence key.
+# It reuses the BMW India mock database; only the id and licence key differ.
+# Loaded only by the tests (they scan classpath*:companies/*.yml).
+# ---------------------------------------------------------------------------
+id: second-company
+displayName: Second Company (test)
+productType: CAR
+idLabel: VIN
+idPattern: "^[A-HJ-NPR-Z0-9]{17}$"
+luhnCheck: false
+apiKey: second-company-test-key
+
+passwordEncoding: SHA256
+
+datasource:
+  url: "jdbc:h2:mem:bmw_india;DB_CLOSE_DELAY=-1"
+  username: sa
+  password: ""
+
+queries:
+  login: >
+    SELECT acc_no AS customer_id, first_name || ' ' || last_name AS full_name,
+           password_sha256 AS password_hash
+    FROM account_holders WHERE LOWER(login_email) = LOWER(:email)
+  product: >
+    SELECT make_model AS model FROM vehicles WHERE vin = :id
+  ownership: >
+    SELECT a.first_name || ' ' || a.last_name AS owner_name, t.transfer_date AS purchase_date
+    FROM title_transfers t JOIN account_holders a ON a.acc_no = t.to_acc_no
+    WHERE t.vin = :id ORDER BY t.transfer_date
